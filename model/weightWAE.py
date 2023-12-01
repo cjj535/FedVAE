@@ -3,9 +3,9 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 
-class WAE(nn.Module):
+class weightWAE(nn.Module):
     def __init__(self, input_size, hidden_size1, hidden_size2, hidden_size3, latent_size, weight=0.25,loss_mode='mse'):
-        super(WAE, self).__init__()
+        super(weightWAE, self).__init__()
 
         self.latent_size = latent_size
         self.weight = weight
@@ -126,15 +126,18 @@ class WAE(nn.Module):
         loss = recon_loss + self.weight * mmd_loss
 
         # mid: 0.9, big: 0.8
-        # quantile = torch.quantile(recon_loss.detach(), 0.7).item()
-        # scaled_loss = (1-1/(1+torch.exp(-10*(recon_loss.detach()-quantile))))*loss
-        scaled_loss = loss
+        quantile = torch.quantile(recon_loss.detach(), 0.8).item()
+        masked_loss = (1-1/(1+torch.exp(-10*(recon_loss.detach()-quantile))))*loss
+        # quantile = torch.quantile(loss.detach(), 0.8).item()
+        # out = torch.zeros_like(recon_loss)
+        # mask = torch.le(recon_loss, quantile, out=out)
+        # masked_loss = mask*loss
         
-        scaled_loss = scaled_loss.mean(dim=0)
+        masked_loss = masked_loss.mean(dim=0)
         recon_loss = recon_loss.mean(dim=0)
         mmd_loss = mmd_loss.mean(dim=0)
         
-        return scaled_loss, recon_loss, mmd_loss, loss
+        return masked_loss, recon_loss, mmd_loss, loss
     
     def forward(self, x):
         z = self.encoder(x)

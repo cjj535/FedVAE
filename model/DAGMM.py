@@ -10,7 +10,7 @@ class DAGMM(nn.Module):
     def __init__(self, input_size, hidden_size1, hidden_size2, hidden_size3, hidden_size):
         super(DAGMM, self).__init__()
 
-        self.latent_size = hidden_size
+        self.latent_size = 2
         self.lambda1 = 0.1
         self.lambda2 = 0.005
         
@@ -24,13 +24,13 @@ class DAGMM(nn.Module):
             nn.Linear(hidden_size2, hidden_size3),
             nn.Tanh(),
             nn.Linear(hidden_size3, hidden_size),
-            # nn.Tanh(),
-            # nn.Linear(hidden_size3, self.latent_size)
+            nn.Tanh(),
+            nn.Linear(hidden_size, self.latent_size)
         )
 
         self.decoder_forward = nn.Sequential(
-            # nn.Linear(self.latent_size, hidden_size3),
-            # nn.Tanh(),
+            nn.Linear(self.latent_size, hidden_size),
+            nn.Tanh(),
             nn.Linear(hidden_size, hidden_size3),
             nn.Tanh(),
             nn.Linear(hidden_size3, hidden_size2),
@@ -42,10 +42,10 @@ class DAGMM(nn.Module):
         )
 
         self.estimation_forward = nn.Sequential(
-            nn.Linear(self.latent_size+2, 100),
+            nn.Linear(self.latent_size+2, 10),
             nn.Tanh(),
             nn.Dropout(p=0.5),
-            nn.Linear(100, n_gmm),
+            nn.Linear(10, n_gmm),
             nn.Softmax(dim=1),
         )
 
@@ -119,7 +119,7 @@ class DAGMM(nn.Module):
         cov_diag = None
         for i in range(k):
             # cov_k: D x D; cov_inverse: 1 x D x D  
-            cov_k = cov[i] + (torch.eye(D)*(1e-1)).to(device)        #矩阵可能不是正定的
+            cov_k = cov[i] + (torch.eye(D)*(1e-3)).to(device)        #矩阵可能不是正定的
             cov_inverse.append(torch.inverse(cov_k.clone()).unsqueeze(0))
 
             det_cov.append((torch.pow(torch.linalg.cholesky(cov_k).diag().prod(),2)*2*np.pi).unsqueeze(0))
