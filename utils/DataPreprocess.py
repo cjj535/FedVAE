@@ -20,11 +20,12 @@ def Save_df(train_file, test_file, df, save_nums, rate):
     attack_df = attack_df.sample(frac=1, random_state=42)
 
     # 取50%的正常流量作为训练数据，剩余作为测试数据
-    train_norm_nums = int(normal_nums*0.8)
+    train_norm_nums = int(normal_nums*0.5)
     # train_norm_nums = 200000
     train_atta_nums = int(train_norm_nums*rate)
     train_df = pd.concat([normal_df[:train_norm_nums], attack_df[:train_atta_nums]], ignore_index=True)
     test_df = pd.concat([normal_df[train_norm_nums:], attack_df[train_atta_nums:]], ignore_index=True)
+    print(train_df.shape[0],test_df.shape[0])
 
     # 分文件保存训练集
     train_nums = train_norm_nums+train_atta_nums
@@ -117,7 +118,7 @@ def UNSW_NB15_Preprocess(src_file_list, train_file, test_file, save_nums, rate):
     # 最大最小归一化或者one-hot编码
     for col in df.columns:
         if df[col].dtype == 'object':
-            df = pd.get_dummies(df, columns=[col])
+            df = pd.get_dummies(df, columns=[col], dtype=int)
             # print(col)
         elif df[col].dtype == 'float64' or df[col].dtype == 'int64':
             # df[col] = scalar.fit_transform(df[[col]])
@@ -140,50 +141,8 @@ def UNSW_NB15_Preprocess(src_file_list, train_file, test_file, save_nums, rate):
 
     Save_df(train_file, test_file, df, save_nums, rate)
 
-'''
-def UNSW_NB15_Preprocess(src_file_list, train_file, test_file, save_nums, rate):
-    # 把所有csv文件导入放入一个list里
-    df_list = []
-    for src_file_name in src_file_list:
-        # 首先只读取前45列
-        tmp_df = pd.read_csv(src_file_name, na_values=' ', usecols=range(45), low_memory=False)
-        df_list.append(tmp_df)
-    # df list拼接成一个df统一处理
-    df = pd.concat(df_list,ignore_index=True)
-    
-    # for col in df.columns:
-    #     print(df[col].name, df[col].dtype)
 
-    # 清除有空白的行，丢弃这些数据
-    print(df.shape[0])
-    df = df.dropna()
-    print(df.shape[0])
-
-    # 丢弃列，并且不修改后两列关于label的信息
-    df.pop('id')
-    column_label = df.pop('label')
-    column_attack = df.pop('attack_cat')
-
-    # 最大最小归一化
-    scalar = MinMaxScaler()
-    # 最大最小归一化或者one-hot编码
-    for col in df.columns:
-        if df[col].dtype == 'float64' or df[col].dtype == 'int64':
-            df[col] = scalar.fit_transform(df[[col]])
-        elif df[col].dtype == 'object':
-            df = pd.get_dummies(df, columns=[col])
-        else:
-            print('error!!!')
-    print(f"after drop cols and rows: {df.shape}")
-
-    # 把label放在后面，依次是数值、独热码、label
-    df.insert(df.shape[1], 'label', column_label)
-    df.insert(df.shape[1], 'type', column_attack)
-
-    Save_df(train_file, test_file, df, save_nums, rate)
-'''
-
-def CIC_IDS2018_Preprocess(src_file_list, train_file, test_file, save_nums, rate):
+'''def CIC_IDS2018_Preprocess(src_file_list, train_file, test_file, save_nums, rate):
     # 把所有csv文件导入放入一个list里
     df_list = []
     for src_file_name in src_file_list:
@@ -231,34 +190,6 @@ def CIC_IDS2018_Preprocess(src_file_list, train_file, test_file, save_nums, rate
     # for col in df.columns:
     #     print(df[col].name,df[col].dtype)
 
-    '''
-    # 绘制每一列的直方图
-    column_label = df.pop('Label')
-    # 去掉带异常值的行，包含小于-1的数和inf无穷大
-    # df = df[df>0]
-    # df = df.replace([np.inf, -np.inf], np.nan).dropna()
-    print(df.shape)
-    # df = df.apply(lambda x: np.log10(x))
-    df = df.clip(upper=1e8)
-    df = df.clip(lower=1)
-    for column in df.columns:
-        plt.figure(figsize=(10, 6))
-        bins_edge = [1,100,1000,10000,100000,1000000,10000000,100000000]
-        
-        hist, bins = np.histogram(df[column],bins=bins_edge)
-        per_values = (hist/len(df[column]))*100
-        print(per_values)
-
-        plt.hist(df[column], bins=bins_edge, edgecolor='k')
-        plt.title(f"Histogram of {column}")
-        plt.xlabel(column)
-        plt.ylabel("Frequency")
-        plt.xscale('log')
-        plt.xticks(bins_edge)
-        # plt.grid(axis='y', linestyle='--', alpha=0.7)
-        plt.show()
-    exit(0)'''
-
     # 数值截断
     df['Tot Fwd Pkts']=df['Tot Fwd Pkts'].clip(upper=1e2)
     df['Tot Bwd Pkts']=df['Tot Bwd Pkts'].clip(upper=1e2)
@@ -295,6 +226,7 @@ def CIC_IDS2018_Preprocess(src_file_list, train_file, test_file, save_nums, rate
 
     # 对dst port这一列做onehot处理，考虑可选值太多，只选取出现次数在前10个的端口
     df.pop('Dst Port')
+    
     # for column in ['Dst Port']:
     #     # 取出某一列，并统计不同的值出现的次数
     #     column_counts = df[column].value_counts()
@@ -311,14 +243,14 @@ def CIC_IDS2018_Preprocess(src_file_list, train_file, test_file, save_nums, rate
     # 最大最小归一化
     for col in df.columns:
         if col in ['Dst Port', 'Protocol']:
-            df = pd.get_dummies(df, columns=[col])
+            df = pd.get_dummies(df, columns=[col], dtype=int)
         elif df[col].dtype == 'float64' or df[col].dtype == 'int64':
             mmin = df[col].min()
             mmax = df[col].max()
             # print(col, mmin, mmax)
             if mmax <= mmin:
                 df.pop(col)
-                print(col)
+                # print(col)
             else:
                 mmin = max(-1,mmin)
                 df[col] = (df[col] - mmin) / (mmax - mmin)
@@ -334,7 +266,6 @@ def CIC_IDS2018_Preprocess(src_file_list, train_file, test_file, save_nums, rate
 
     Save_df(train_file, test_file, df, save_nums, rate)
 
-'''
 def TON_IoT_Preprocess(src_file_list, train_file, test_file, save_nums, rate):
     # 把所有csv文件导入放入一个list里
     df_list = []
@@ -392,14 +323,70 @@ def TON_IoT_Preprocess(src_file_list, train_file, test_file, save_nums, rate):
     df.insert(df.shape[1], 'label', column_label)
     df.insert(df.shape[1], 'type', column_attack)
 
-    Save_df(train_file, test_file, df, save_nums, rate)
-'''
+    Save_df(train_file, test_file, df, save_nums, rate)'''
 
+
+def NSL_KDD_Preprocess(src_file_list, train_file, test_file, save_nums, rate):
+    # 把所有csv文件导入放入一个list里
+    df_list = []
+    for src_file_name in src_file_list:
+        # 首先只读取前42列，然后如果有空格的值会被视为Nan，第一行数据作废
+        tmp_df = pd.read_csv(src_file_name, header=None, skiprows=1, usecols=range(42), na_values=' ', low_memory=False)
+        # 把选取的添加到list中
+        df_list.append(tmp_df)
+    
+    # 拼接所有数据到一个df中统一处理
+    df = pd.concat(df_list,ignore_index=True)
+
+    # 添加每一列的名字
+    df.columns = ['duration', 'protocol_type', 'service', 'flag', 'src_bytes', 'dst_bytes', 'land', 'wrong_fragment', 'urgent', 'hot', 
+                'num_failed_logins', 'logged_in', 'num_compromised', 'root_shell', 'su_attempted', 'num_root', 'num_file_creations', 'num_shells', 'num_access_files', 'num_outbound_cmds', 
+                'is_host_login', 'is_guest_login', 'count', 'srv_count', 'serror_rate', 'srv_serror_rate', 'rerror_rate', 'srv_rerror_rate', 'same_srv_rate', 'diff_srv_rate', 
+                'srv_diff_host_rate', 'dst_host_count', 'dst_host_srv_count', 'dst_host_same_srv_rate', 'dst_host_diff_srv_rate', 'dst_host_same_src_port_rate', 'dst_host_srv_diff_host_rate', 
+                'dst_host_serror_rate', 'dst_host_srv_serror_rate', 'dst_host_rerror_rate', 'dst_host_srv_rerror_rate', 'class',]
+    
+    print(f"before drop na: {df.shape}")
+    # 清除有空白的行，丢弃这些数据
+    df = df.dropna()
+    print(f"after drop na: {df.shape}")
+
+    # 数值压缩
+    df['src_bytes']=np.log10(1+df['src_bytes'])
+    df['dst_bytes']=np.log10(1+df['dst_bytes'])
+
+    column_label = df.pop('class')
+
+    # 最大最小归一化
+    for col in df.columns:
+        if col in ['protocol_type', 'service', 'flag']:
+            df = pd.get_dummies(df, columns=[col], dtype=int)
+        elif df[col].dtype == 'float64' or df[col].dtype == 'int64':
+            mmin = df[col].min()
+            mmax = df[col].max()
+            # print(col, mmin, mmax)
+            if mmax <= mmin:
+                df.pop(col)
+                print(col)
+            else:
+                mmin = max(0,mmin)
+                df[col] = (df[col] - mmin) / (mmax - mmin)
+        else:
+            print('error!!!')
+    print(f"after drop cols and rows: {df.shape}")
+
+    # 把label放在后面，依次是数值、one hot编码、label
+    print(df.shape, column_label.shape)
+    df['label'] = 0
+    df.loc[column_label!='normal', 'label'] = 1
+    df.insert(df.shape[1], 'type', column_label)
+
+    Save_df(train_file, test_file, df, save_nums, rate)
+    
 def main():
     # Training settings
     parser = argparse.ArgumentParser(description='Preprocess')
     
-    parser.add_argument('--dataset', type=str, default='UNSW-NB15', choices=['UNSW-NB15', 'CIC-IDS2018-Dos', 'CIC-IDS2018-Infiltration'],
+    parser.add_argument('--dataset', type=str, default='UNSW-NB15', choices=['UNSW-NB15', 'NSL-KDD'],
                         help='dataset name (default: UNSW-NB15)')
     parser.add_argument('--rate', type=float, default=0.00,
                         help='attack rate in trainset (default: 0.00)')
@@ -415,10 +402,8 @@ def main():
     test_file = f'./dataset/{args.dataset}/testset-{int(args.rate*100)}%/preprocessed_test'
     if args.dataset == 'UNSW-NB15':
         UNSW_NB15_Preprocess(file_list, train_file, test_file, save_nums=10, rate = args.rate)
-    elif args.dataset == 'CIC-IDS2018-Dos':
-        CIC_IDS2018_Preprocess(file_list, train_file, test_file, save_nums=10, rate = args.rate)
-    elif args.dataset == 'CIC-IDS2018-Infiltration':
-        CIC_IDS2018_Preprocess(file_list, train_file, test_file, save_nums=10, rate = args.rate)
+    elif args.dataset == 'NSL-KDD':
+        NSL_KDD_Preprocess(file_list, train_file, test_file, save_nums=1, rate = args.rate)
 
 if __name__ == '__main__':
     main()

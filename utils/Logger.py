@@ -1,12 +1,12 @@
 import logging
 
-serlogger = logging.getLogger('ser_logger')
-serlogger.setLevel(logging.INFO)
-file_hander = logging.FileHandler('./log/ser_log.log')
-file_hander.setLevel(logging.INFO)
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-file_hander.setFormatter(formatter)
-serlogger.addHandler(file_hander)
+# serlogger = logging.getLogger('ser_logger')
+# serlogger.setLevel(logging.INFO)
+# file_hander = logging.FileHandler('./log/.log')
+# file_hander.setLevel(logging.INFO)
+# formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+# file_hander.setFormatter(formatter)
+# serlogger.addHandler(file_hander)
 
 cltlogger = logging.getLogger('clt_logger')
 cltlogger.setLevel(logging.INFO)
